@@ -21,12 +21,16 @@ BLACKLISTED_REGIONS = [
 ]
 
 
-def generate_id(instance, tags_filter, region):
+def generate_id(instance, tags_filter, region, opsworks_filter):
     instance_id = ''
 
     if tags_filter is not None:
         for tag in tags_filter.split(','):
             value = instance.tags.get(tag, None)
+            if tag == 'Name':
+                if opsworks_filter:
+                    if value and " - " in value:
+                        value = value.split(' - ',1)[1]
             if value:
                 if not instance_id:
                     instance_id = value
@@ -35,6 +39,10 @@ def generate_id(instance, tags_filter, region):
     else:
         for tag, value in instance.tags.iteritems():
             if not tag.startswith('aws'):
+                if tag == 'Name':
+                    if opsworks_filter:
+                        if ' - ' in value:
+                            value = value.split(' - ',1)[1]
                 if not instance_id:
                     instance_id = value
                 else:
@@ -56,6 +64,8 @@ def main():
     parser.add_argument('--no-identities-only', action='store_true', help='Do not include IdentitiesOnly=yes in ssh config; may cause connection refused if using ssh-agent')
     parser.add_argument('--prefix', default='', help='Specify a prefix to prepend to all host names')
     parser.add_argument('--private', action='store_true', help='Use private IP addresses (public are used by default)')
+    parser.add_argument('--bastion', help='Use specified bastion host (Off by default)' )
+    parser.add_argument('--no-opsworks-stack-name', action='store_true', help="Remove the stackname from ec2 tag \'Name\'")
     parser.add_argument('--profile', help='Specify AWS credential profile to use')
     parser.add_argument('--region', action='store_true', help='Append the region name at the end of the concatenation')
     parser.add_argument('--strict-hostkey-checking', action='store_true', help='Do not include StrictHostKeyChecking=no in ssh config')
@@ -100,7 +110,7 @@ def main():
 
             instances[instance.launch_time].append(instance)
 
-            instance_id = generate_id(instance, args.tags, args.region)
+            instance_id = generate_id(instance, args.tags, args.region, args.no_opsworks_stack_name)
 
             if instance_id not in counts_total:
                 counts_total[instance_id] = 0
@@ -140,7 +150,7 @@ def main():
                     sys.stderr.write('Cannot lookup ip address for instance %s, skipped it.' % instance.id)
                     continue
 
-            instance_id = generate_id(instance, args.tags, args.region)
+            instance_id = generate_id(instance, args.tags, args.region, args.no_opsworks_stack_name)
 
             if counts_total[instance_id] != 1:
                 counts_incremental[instance_id] += 1
@@ -151,6 +161,9 @@ def main():
 
             print 'Host ' + hostid
             print '    HostName ' + ip_addr
+
+            if args.bastion:
+                print '    ProxyCommand ssh ' + amis[instance.image_id] + '@' + args.bastion + ' -W %h:%p'
 
             try:
                 if amis[instance.image_id] is not None:
