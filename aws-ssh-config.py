@@ -56,7 +56,6 @@ def generate_id(instance, tags_filter, region, opsworks_filter):
 
     return instance_id
 
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--default-user', help='Default ssh username to use if it can\'t be detected from AMI name')
@@ -72,6 +71,7 @@ def main():
     parser.add_argument('--tags', help='A comma-separated list of tag names to be considered for concatenation. If omitted, all tags will be used')
     parser.add_argument('--user', help='Override the ssh username for all hosts')
     parser.add_argument('--white-list-region', default='', help='Which regions must be included. If omitted, all regions are considered', nargs="+")
+    parser.add_argument('--default-ssh-key', help='Override the ssh key for all users.')
 
     args = parser.parse_args()
 
@@ -176,7 +176,11 @@ def main():
             else:
                 keydir = '~/.ssh/'
 
-            print '    IdentityFile ' + keydir + instance.key_name.replace(' ', '_') + '.pem'
+            if args.default_ssh_key:
+                print '    IdentityFile ' + args.default_ssh_key
+            else:
+                print '    IdentityFile ' + keydir + instance.key_name.replace(' ', '_') + '.pem'
+
             if not args.no_identities_only:
                 # ensure ssh-agent keys don't flood when we know the right file to use
                 print '    IdentitiesOnly yes'
