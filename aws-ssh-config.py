@@ -21,7 +21,7 @@ BLACKLISTED_REGIONS = [
 ]
 
 
-def generate_id(instance, tags_filter, region, opsworks_filter):
+def generate_id(instance, tags_filter, region, opsworks_filter, bastion_exclusions):
     instance_id = ''
 
     if tags_filter is not None:
@@ -54,6 +54,16 @@ def generate_id(instance, tags_filter, region, opsworks_filter):
     if region:
         instance_id += '-' + instance.placement
 
+    global exclude_bastion
+    if bastion_exclusions:
+        for excluded in bastion_exclusions:
+            if excluded in instance_id:
+                exclude_bastion = True
+            else:
+                exclude_bastion = False
+    else:
+        exclude_bastion = False
+
     return instance_id
 
 def main():
@@ -64,6 +74,7 @@ def main():
     parser.add_argument('--prefix', default='', help='Specify a prefix to prepend to all host names')
     parser.add_argument('--private', action='store_true', help='Use private IP addresses (public are used by default)')
     parser.add_argument('--bastion', help='Use specified bastion host (Off by default)' )
+    parser.add_argument('--bastion-exclude', default='' ,help="Comma seperated list of hosts to exclude from bastion proxy.")
     parser.add_argument('--no-opsworks-stack-name', action='store_true', help="Remove the stackname from ec2 tag \'Name\'")
     parser.add_argument('--profile', help='Specify AWS credential profile to use')
     parser.add_argument('--region', action='store_true', help='Append the region name at the end of the concatenation')
@@ -84,6 +95,11 @@ def main():
     print "# " + " ".join(sys.argv)
     print "# "
     print
+
+    if args.bastion_exclude:
+        bastion_exclusions = args.bastion_exclude.split(',')
+    else:
+        bastion_exclusions = False
 
     for region in boto.ec2.regions():
         if args.white_list_region and region.name not in args.white_list_region:
@@ -110,7 +126,7 @@ def main():
 
             instances[instance.launch_time].append(instance)
 
-            instance_id = generate_id(instance, args.tags, args.region, args.no_opsworks_stack_name)
+            instance_id = generate_id(instance, args.tags, args.region, args.no_opsworks_stack_name, bastion_exclusions)
 
             if instance_id not in counts_total:
                 counts_total[instance_id] = 0
@@ -150,7 +166,7 @@ def main():
                     sys.stderr.write('Cannot lookup ip address for instance %s, skipped it.' % instance.id)
                     continue
 
-            instance_id = generate_id(instance, args.tags, args.region, args.no_opsworks_stack_name)
+            instance_id = generate_id(instance, args.tags, args.region, args.no_opsworks_stack_name, bastion_exclusions)
 
             if counts_total[instance_id] != 1:
                 counts_incremental[instance_id] += 1
@@ -163,7 +179,9 @@ def main():
             print '    HostName ' + ip_addr
 
             if args.bastion:
-                print '    ProxyCommand ssh ' + amis[instance.image_id] + '@' + args.bastion + ' -W %h:%p'
+                if not exclude_bastion:
+                    print '    ForwardAgent yes'
+                    print '    ProxyCommand ssh ' + amis[instance.image_id] + '@' + args.bastion + ' -W %h:%p'
 
             try:
                 if amis[instance.image_id] is not None:
