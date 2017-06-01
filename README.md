@@ -109,27 +109,29 @@ gianluca@sid:~$ ssh d[TAB]
 dev-worker-1
 dev-worker-2
 ```
-If the ssh completion will not immediately work you should add the following script to your `.bash_profile`
+If the ssh completion will not immediately work you should add the following script to your `.bash_profile` (Include this script if utilizing the Include method in ~/.ssh/config, script looks for files in ~/.ssh/conf.d/)
 
 ```
-_complete_ssh_hosts ()
-{
+_complete_ssh_hosts (){
         COMPREPLY=()
         cur="${COMP_WORDS[COMP_CWORD]}"
+        if [ -d ~/.ssh/conf.d/ ]; then
+          cd ~/.ssh/conf.d/
+          ssh_configs="*"
+        fi
         comp_ssh_hosts=`cat ~/.ssh/known_hosts | \
                         cut -f 1 -d ' ' | \
                         sed -e s/,.*//g | \
                         grep -v ^# | \
                         uniq | \
                         grep -v "\[" ;
-                cat ~/.ssh/config | \
+                cat $ssh_configs ~/.ssh/config | \
                         grep "^Host " | \
                         awk '{print $2}'
                 `
         COMPREPLY=( $(compgen -W "${comp_ssh_hosts}" -- $cur))
         return 0
 }
-complete -F _complete_ssh_hosts ssh
 ```
 and run `gianluca@sid:~$ source .bash_profile` 
 
