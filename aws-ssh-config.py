@@ -75,6 +75,7 @@ def main():
     parser.add_argument('--private', action='store_true', help='Use private IP addresses (public are used by default)')
     parser.add_argument('--bastion', help='Use specified bastion host (Off by default)' )
     parser.add_argument('--bastion-exclude', default='' ,help="Comma seperated list of hosts to exclude from bastion proxy.")
+    parser.add_argument('--bastion-user', default='', help="Used to connect to the bastion server.")
     parser.add_argument('--no-opsworks-stack-name', action='store_true', help="Remove the stackname from ec2 tag \'Name\'")
     parser.add_argument('--profile', help='Specify AWS credential profile to use')
     parser.add_argument('--region', action='store_true', help='Append the region name at the end of the concatenation')
@@ -180,8 +181,12 @@ def main():
 
             if args.bastion:
                 if not exclude_bastion:
+                    if args.bastion_user:
+                        bastion_user = args.bastion_user
+                    else:
+                        bastion_user = amis[instance.instance.image_id]
                     print '    ForwardAgent yes'
-                    print '    ProxyCommand ssh ' + amis[instance.image_id] + '@' + args.bastion + ' -W %h:%p'
+                    print '    ProxyCommand ssh -A ' + bastion_user + '@' + args.bastion + ' nc %h %p'
 
             try:
                 if amis[instance.image_id] is not None:
