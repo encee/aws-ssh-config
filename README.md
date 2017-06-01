@@ -14,6 +14,7 @@ There are a few similar scripts around but I couldn't find one that would satisf
 - Support multiple customizable tags concatenations in a user-provided order
 - Support region (with AZ) in the host name concatenation
 - Properly leverage tab completion
+- Support bastion proxies for single region
 
 Usage
 ---
@@ -25,10 +26,14 @@ Supported arguments:
 ```
 usage: aws-ssh-config.py [-h] [--default-user DEFAULT_USER] [--keydir KEYDIR]
                          [--no-identities-only] [--prefix PREFIX] [--private]
-                         [--profile PROFILE] [--region]
-                         [--strict-hostkey-checking] [--tags TAGS]
+                         [--bastion BASTION]
+                         [--bastion-exclude BASTION_EXCLUDE]
+                         [--bastion-user BASTION_USER]
+                         [--no-opsworks-stack-name] [--profile PROFILE]
+                         [--region] [--strict-hostkey-checking] [--tags TAGS]
                          [--user USER]
                          [--white-list-region WHITE_LIST_REGION [WHITE_LIST_REGION ...]]
+                         [--default-ssh-key DEFAULT_SSH_KEY]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -40,6 +45,14 @@ optional arguments:
                         cause connection refused if using ssh-agent
   --prefix PREFIX       Specify a prefix to prepend to all host names
   --private             Use private IP addresses (public are used by default)
+  --bastion BASTION     Use specified bastion host (Off by default)
+  --bastion-exclude BASTION_EXCLUDE
+                        Comma seperated list of hosts to exclude from bastion
+                        proxy.
+  --bastion-user BASTION_USER
+                        Used to connect to the bastion server.
+  --no-opsworks-stack-name
+                        Remove the stackname from ec2 tag 'Name'
   --profile PROFILE     Specify AWS credential profile to use
   --region              Append the region name at the end of the concatenation
   --strict-hostkey-checking
@@ -50,6 +63,9 @@ optional arguments:
   --white-list-region WHITE_LIST_REGION [WHITE_LIST_REGION ...]
                         Which regions must be included. If omitted, all
                         regions are considered
+  --default-ssh-key DEFAULT_SSH_KEY
+                        Override the ssh key for all users.
+
 ```
 
 By default, it will name hosts by concatenating all tags:
