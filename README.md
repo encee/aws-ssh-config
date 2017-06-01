@@ -130,10 +130,19 @@ _complete_ssh_hosts (){
                         awk '{print $2}'
                 `
         COMPREPLY=( $(compgen -W "${comp_ssh_hosts}" -- $cur))
-        return 0
+        return 0       
 }
+
+update-auto-complete(){
+    complete -F _complete_ssh_hosts ssh
+}
+
+update-auto-complete
+
 ```
 and run `gianluca@sid:~$ source .bash_profile` 
+
+After which any time you update the files, run `update-auto-complete` to add them to the completion.
 
 It's possible to customize which tags one is interested in, as well as the order used for concatenation:
 
